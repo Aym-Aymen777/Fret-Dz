@@ -276,7 +276,7 @@ export default function CreateShipmentPage() {
                   </svg>
                   <span className="font-semibold text-primary-500">{form.destination}</span>
                   <span className="ml-auto text-[var(--fg-muted)]">
-                    {form.weight_kg ? `${Number(form.weight_kg).toLocaleString()} kg` : ""}
+                    {form.weight_kg && !isNaN(Number(form.weight_kg)) ? `${Number(form.weight_kg).toLocaleString()} kg` : ""}
                   </span>
                 </div>
               )}

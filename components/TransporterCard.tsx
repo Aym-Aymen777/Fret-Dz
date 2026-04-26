@@ -104,7 +104,7 @@ export default function TransporterCard({ transporter }: TransporterCardProps) {
               Capacité
             </dt>
             <dd className="mt-0.5 font-semibold text-[var(--fg)]">
-              {transporter.capacity_kg.toLocaleString()} kg
+              {transporter.capacity_kg?.toLocaleString() ?? 0} kg
             </dd>
           </div>
           <div className="rounded-lg bg-[var(--bg)] px-3 py-2 col-span-2">
@@ -113,7 +113,7 @@ export default function TransporterCard({ transporter }: TransporterCardProps) {
             </dt>
             <dd className="mt-0.5 font-semibold text-[var(--fg)]">
               <span className="text-secondary text-base">
-                {transporter.price_per_km.toLocaleString()} DZD
+                {transporter.price_per_km?.toLocaleString() ?? 0} DZD
               </span>
               <span className="text-[var(--fg-muted)] font-normal"> / km</span>
             </dd>

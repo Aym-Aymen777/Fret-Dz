@@ -69,11 +69,11 @@ export default function ShipmentCard({ shipment }: ShipmentCardProps) {
 
       {/* ── Meta grid ── */}
       <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-        {shipment.estimated_price !== undefined && (
+        {shipment.estimated_price != null && (
           <div>
             <dt className="text-2xs font-medium uppercase tracking-wide text-[var(--fg-muted)]">Prix estimé</dt>
             <dd className="font-semibold text-secondary">
-              {shipment.estimated_price.toLocaleString()} DZD
+              {shipment.estimated_price?.toLocaleString() ?? 0} DZD
             </dd>
           </div>
         )}

@@ -86,8 +86,8 @@ export default async function TransporterDetailPage({ params }: Props) {
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { label: "Véhicule",  value: VEHICLE_LABELS[t.vehicle_type] ?? t.vehicle_type },
-              { label: "Capacité",  value: `${t.capacity_kg.toLocaleString()} kg` },
-              { label: "Tarif/km", value: `${t.price_per_km.toLocaleString()} DZD` },
+              { label: "Capacité",  value: `${t.capacity_kg?.toLocaleString() ?? 0} kg` },
+              { label: "Tarif/km", value: `${t.price_per_km?.toLocaleString() ?? 0} DZD` },
               { label: "Note",      value: `⭐ ${t.rating.toFixed(1)} (${t.rating_count})` },
             ].map((item) => (
               <div key={item.label} className="rounded-xl bg-[var(--bg)] px-4 py-3">
