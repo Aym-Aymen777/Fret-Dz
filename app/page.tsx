@@ -13,7 +13,7 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/dashboard");
+  if (user) redirect("/dashboard");
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[var(--bg)]">
