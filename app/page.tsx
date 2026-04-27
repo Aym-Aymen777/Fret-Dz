@@ -13,7 +13,20 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) redirect("/dashboard");
+  if (user) {
+    // Fetch role to redirect to the correct landing page
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role === "transporter") {
+      redirect("/transporter");
+    } else {
+      redirect("/dashboard");
+    }
+  }
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[var(--bg)]">

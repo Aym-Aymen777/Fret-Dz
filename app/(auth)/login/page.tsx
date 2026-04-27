@@ -1,16 +1,20 @@
 "use client";
 // ─────────────────────────────────────────────
 //  Fret-DZ  |  Login Page
+//
+//  BUILD FIX: useSearchParams() must be inside a <Suspense> boundary
+//  in Next.js App Router. The component is split into LoginPageInner
+//  (which calls useSearchParams) and a default export that wraps it.
 // ─────────────────────────────────────────────
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const redirectTo = params.get("redirectedFrom") ?? "/dashboard" ;
+  const redirectTo = params.get("redirectedFrom") ?? "/dashboard";
 
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
@@ -25,10 +29,11 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    const { data: signInData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
     if (authError) {
       setError(
@@ -38,6 +43,21 @@ export default function LoginPage() {
       );
       setLoading(false);
       return;
+    }
+
+    // BUG-3 FIX: redirect transporters to their own dashboard, not the client one
+    if (signInData.user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", signInData.user.id)
+        .single();
+
+      if (profile?.role === "transporter") {
+        router.push("/transporter");
+        router.refresh();
+        return;
+      }
     }
 
     router.push(redirectTo);
@@ -173,5 +193,15 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// Default export wraps the inner component in Suspense so that
+// useSearchParams() does not trigger a build-time prerender error.
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

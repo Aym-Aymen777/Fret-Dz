@@ -17,10 +17,12 @@ interface UseShipmentsReturn {
 }
 
 export function useShipments(): UseShipmentsReturn {
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // BUG-10 FIX: store userId in state so realtime filter can reference it
+  const [userId, setUserId] = useState<string | null>(null);
 
   const fetchShipments = useCallback(async () => {
     setLoading(true);
@@ -32,6 +34,9 @@ export function useShipments(): UseShipmentsReturn {
       setLoading(false);
       return;
     }
+
+    // Store for the realtime subscription
+    setUserId(userData.user.id);
 
     const { data, error: fetchError } = await supabase
       .from("shipments")
@@ -114,12 +119,23 @@ export function useShipments(): UseShipmentsReturn {
   // Initial fetch + real-time subscription
   useEffect(() => {
     fetchShipments();
+  }, [fetchShipments]);
+
+  // BUG-10 FIX: add row-level filter so only changes to this user's
+  // shipments trigger a re-fetch — not every shipment in the system.
+  useEffect(() => {
+    if (!userId) return;
 
     const channel = supabase
-      .channel("shipments-changes")
+      .channel(`shipments-changes-${userId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "shipments" },
+        {
+          event: "*",
+          schema: "public",
+          table: "shipments",
+          filter: `client_id=eq.${userId}`,
+        },
         () => fetchShipments()
       )
       .subscribe();
@@ -127,8 +143,7 @@ export function useShipments(): UseShipmentsReturn {
     return () => {
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [supabase, userId, fetchShipments]);
 
   return { shipments, loading, error, refresh: fetchShipments, createShipment };
 }

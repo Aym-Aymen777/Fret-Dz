@@ -1,7 +1,8 @@
 // ─────────────────────────────────────────────
 //  Fret-DZ  |  Dashboard Group Layout
-//  Server Component — verifies session on server
-//  then renders Navbar + page slot
+//  Server Component — verifies session & auth,
+//  then renders Navbar + page slot.
+//  Role-based guards are enforced at the page level.
 // ─────────────────────────────────────────────
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -17,7 +18,7 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Double-check on server (middleware already handles edge, but SSR is safer)
+  // Redirect to login if not authenticated
   if (!user) redirect("/login");
 
   return (

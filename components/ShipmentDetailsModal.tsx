@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import type { Shipment } from "@/lib/types";
 
 interface Props {
@@ -10,18 +10,41 @@ interface Props {
 }
 
 export default function ShipmentDetailsModal({ shipment, isOpen, onClose }: Props) {
+  // BUG-14 FIX: auto-focus close button + Escape key listener
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Move focus into the modal
+    closeRef.current?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Détails de l'expédition"
+    >
       <div className="bg-[var(--bg)] w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-6 border-b border-[var(--border)]">
           <h2 className="text-xl font-display font-bold text-[var(--fg)]">
-            Détails de l'expédition
+            Détails de l&apos;expédition
           </h2>
-          <button 
+          <button
+            ref={closeRef}
             onClick={onClose}
             className="text-[var(--fg-muted)] hover:text-[var(--fg)] transition-colors"
+            aria-label="Fermer"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -115,9 +138,9 @@ export default function ShipmentDetailsModal({ shipment, isOpen, onClose }: Prop
               <h4 className="text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider mb-2">
                 Document joint
               </h4>
-              <a 
-                href={shipment.document_url} 
-                target="_blank" 
+              <a
+                href={shipment.document_url}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-info/10 text-info rounded-lg hover:bg-info/20 transition-colors text-sm font-medium"
               >

@@ -16,7 +16,7 @@ interface UseSessionReturn {
 }
 
 export function useSession(): UseSessionReturn {
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 

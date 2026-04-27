@@ -1,16 +1,30 @@
 // ─────────────────────────────────────────────
-//  Fret-DZ  |  Proxy (Next.js 16 edge proxy)
-//  Refreshes Supabase session on every request
-//  and protects dashboard routes.
+//  Fret-DZ  |  Next.js 16 Route Proxy
+//  In Next.js 16 the convention changed from "middleware.ts"
+//  to "proxy.ts" with export function named "proxy".
+//
+//  Refreshes Supabase session on every request and protects routes.
+//
+//  FIXES applied:
+//  BUG-2:  This file IS the middleware (proxy) — correctly named proxy.ts
+//  BUG-4:  Role-aware redirect for authenticated users on auth pages
+//  BUG-15: /transporter added to PROTECTED_PREFIXES
 // ─────────────────────────────────────────────
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Routes that require authentication
-const PROTECTED_PREFIXES = ["/dashboard", "/transporters", "/create-shipment"];
+// BUG-15 FIX: /transporter was missing from the original
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/transporters",
+  "/create-shipment",
+  "/transporter",
+];
 // Routes only accessible when NOT authenticated
 const AUTH_ROUTES = ["/login", "/register"];
 
+// Next.js 16 requires the exported function to be named "proxy"
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -47,7 +61,9 @@ export async function proxy(request: NextRequest) {
   const isProtected = PROTECTED_PREFIXES.some((prefix) =>
     pathname.startsWith(prefix)
   );
-  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+  const isAuthRoute = AUTH_ROUTES.some((route) =>
+    pathname.startsWith(route)
+  );
 
   // Redirect unauthenticated users away from protected pages
   if (!user && isProtected) {
@@ -57,11 +73,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect authenticated users away from auth pages
+  // BUG-4 FIX: Role-aware redirect for authenticated users on auth pages.
+  // Previously always sent to /dashboard — transporters now go to /transporter.
   if (user && isAuthRoute) {
-    const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/dashboard";
-    return NextResponse.redirect(dashboardUrl);
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const destination =
+      profile?.role === "transporter" ? "/transporter" : "/dashboard";
+
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = destination;
+    return NextResponse.redirect(redirectUrl);
   }
 
   return supabaseResponse;

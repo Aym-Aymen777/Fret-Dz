@@ -2,11 +2,13 @@
 // ─────────────────────────────────────────────
 //  Fret-DZ  |  Navbar Component
 //  Client Component — reads session, dark toggle, role-based nav
+//
+//  BUG-16 FIX: removed duplicate useSession call. useUserProfile already
+//  exposes user + loading + signOut, so we only need one hook here.
 // ─────────────────────────────────────────────
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useSession } from "@/hooks/useSession";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import type { UserRole } from "@/lib/types";
 
@@ -140,15 +142,18 @@ const ICONS: Record<string, React.ReactNode> = {
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, signOut } = useSession();
-  const { role } = useUserProfile();
+  // BUG-16 FIX: single hook — no more double onAuthStateChange subscription
+  const { user, role, loading, profile } = useUserProfile();
   const [dark, setDark] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Get nav links for current role
-  const visibleLinks = NAV_LINKS.filter(
-    (link) => !link.roles || link.roles.includes(role!),
-  );
+  // Get nav links for current role — empty array while loading to avoid flicker
+  const visibleLinks = !loading
+    ? NAV_LINKS.filter((link) => !link.roles || (role !== null && link.roles.includes(role)))
+    : [];
+
+  // Home link depends on role
+  const homeHref = role === "transporter" ? "/transporter" : "/dashboard";
 
   // Sync dark mode from localStorage
   useEffect(() => {
@@ -169,18 +174,26 @@ export default function Navbar() {
   };
 
   const handleSignOut = async () => {
-    await signOut();
+    // Import createClient here to avoid stale closure — useUserProfile
+    // does not expose signOut so we call Supabase directly.
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    await supabase.auth.signOut();
     router.push("/login");
   };
 
-  const initials = user?.email ? user.email.substring(0, 2).toUpperCase() : "?";
+  const initials = profile?.full_name
+    ? profile.full_name.substring(0, 2).toUpperCase()
+    : user?.email
+    ? user.email.substring(0, 2).toUpperCase()
+    : "?";
 
   return (
     <>
       <header className="sticky top-0 z-navbar border-b border-[var(--border)] glass">
         <nav className="page-container flex h-16 items-center justify-between gap-4">
-          {/* ── Logo ── */}
-          <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
+          {/* ── Logo — href adapts to role ── */}
+          <Link href={homeHref} className="flex items-center gap-2 shrink-0">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500 shadow-glow">
               <span className="text-sm font-black text-white">F</span>
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 interface Props {
   isOpen: boolean;
@@ -21,6 +21,28 @@ const REASONS = [
 export default function RejectionModal({ isOpen, onClose, onConfirm, isSubmitting }: Props) {
   const [selectedReason, setSelectedReason] = useState(REASONS[0]);
   const [otherReason, setOtherReason] = useState("");
+  // BUG-14 FIX: ref for auto-focus
+  const firstRadioRef = useRef<HTMLInputElement>(null);
+
+  // Reset form state whenever the modal opens for a new shipment
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedReason(REASONS[0]);
+      setOtherReason("");
+      // Auto-focus first radio button
+      setTimeout(() => firstRadioRef.current?.focus(), 0);
+    }
+  }, [isOpen]);
+
+  // BUG-14 FIX: Escape key closes the modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isSubmitting) onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, isSubmitting, onClose]);
 
   if (!isOpen) return null;
 
@@ -32,11 +54,16 @@ export default function RejectionModal({ isOpen, onClose, onConfirm, isSubmittin
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Rejeter l'expédition"
+    >
       <div className="bg-[var(--bg)] w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col">
         <div className="p-6 border-b border-[var(--border)]">
           <h2 className="text-xl font-display font-bold text-[var(--fg)]">
-            Rejeter l'expédition
+            Rejeter l&apos;expédition
           </h2>
           <p className="text-sm text-[var(--fg-muted)] mt-1">
             Veuillez indiquer la raison de ce refus. Cela aidera le client.
@@ -45,15 +72,17 @@ export default function RejectionModal({ isOpen, onClose, onConfirm, isSubmittin
 
         <div className="p-6 space-y-4">
           <div className="space-y-3">
-            {REASONS.map((reason) => (
+            {REASONS.map((reason, i) => (
               <label key={reason} className="flex items-center gap-3 cursor-pointer">
                 <input
+                  ref={i === 0 ? firstRadioRef : undefined}
                   type="radio"
                   name="reject-reason"
                   value={reason}
                   checked={selectedReason === reason}
                   onChange={(e) => setSelectedReason(e.target.value)}
                   className="w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                  disabled={isSubmitting}
                 />
                 <span className="text-[var(--fg)] text-sm">{reason}</span>
               </label>
@@ -73,15 +102,15 @@ export default function RejectionModal({ isOpen, onClose, onConfirm, isSubmittin
         </div>
 
         <div className="p-6 border-t border-[var(--border)] flex justify-end gap-3 bg-[var(--surface)]/50">
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             disabled={isSubmitting}
             className="btn-ghost"
           >
             Annuler
           </button>
-          <button 
-            onClick={handleSubmit} 
+          <button
+            onClick={handleSubmit}
             disabled={isSubmitting || (selectedReason === "Autre" && !otherReason.trim())}
             className="px-4 py-2 bg-danger text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 font-medium flex items-center gap-2"
           >

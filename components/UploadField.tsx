@@ -31,13 +31,9 @@ export default function UploadField({
     (f: File): string | null => {
       const maxBytes = maxSizeMB * 1024 * 1024;
       if (f.size > maxBytes) return `Fichier trop volumineux (max ${maxSizeMB} Mo)`;
-      const allowed = accept.split(",").map((a) => a.trim());
+      const allowed = accept.split(",").map((a) => a.trim().toLowerCase());
       const ext = "." + f.name.split(".").pop()?.toLowerCase();
-      const mime = f.type;
-      const valid =
-        allowed.some((a) => a === ext) ||
-        allowed.some((a) => a.startsWith(".") === false && mime.includes(a));
-      if (!valid) return `Type non accepté. Formats : ${accept}`;
+      if (!allowed.includes(ext)) return `Type non accepté. Formats : ${accept}`;
       return null;
     },
     [accept, maxSizeMB]
@@ -135,7 +131,12 @@ export default function UploadField({
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault(); // ← Bug 1 fix: prevent native form submission on Enter
+            inputRef.current?.click();
+          }
+        }}
         className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center cursor-pointer transition-all duration-200
           ${dragging
             ? "border-primary-500 bg-primary-500/5 scale-[1.01]"

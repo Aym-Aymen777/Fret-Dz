@@ -48,7 +48,7 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
 
 export default function TransporterCard({ transporter }: TransporterCardProps) {
   return (
-    <article className="card-hover group relative flex flex-col overflow-hidden">
+    <article className="card card-hover group relative flex flex-col overflow-hidden">
       {/* ── Availability indicator ── */}
       <div
         className={`absolute top-3 right-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-2xs font-semibold

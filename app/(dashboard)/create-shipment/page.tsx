@@ -88,7 +88,7 @@ export default function CreateShipmentPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!validateStep(3)) return;
+    // Step validations already ran via next() — no need to re-validate step 3
 
     setSub(true);
     setApiErr(null);

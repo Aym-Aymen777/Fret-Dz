@@ -4,6 +4,7 @@
 //  then renders client widgets below
 // ─────────────────────────────────────────────
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import ShipmentCard from "@/components/ShipmentCard";
@@ -30,6 +31,19 @@ async function getShipments(userId: string): Promise<Shipment[]> {
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  // BUG-8 FIX: defensive role guard — middleware handles this too, but belt-and-suspenders
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role === "transporter") {
+      redirect("/transporter");
+    }
+  }
 
   const shipments = user ? await getShipments(user.id) : [];
 

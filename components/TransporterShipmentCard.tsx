@@ -76,7 +76,8 @@ export default function TransporterShipmentCard({
 
       {/* Actions Footer */}
       <div className="flex items-center gap-2 pt-2 mt-auto">
-        <button 
+        <button
+          type="button"
           onClick={() => onViewDetails(shipment)}
           className="btn-ghost flex-1 text-xs py-2"
         >
@@ -86,7 +87,8 @@ export default function TransporterShipmentCard({
         {shipment.status === "pending" && (
           <>
             {onReject && (
-              <button 
+              <button
+                type="button"
                 onClick={() => onReject(shipment)}
                 disabled={isUpdating}
                 className="px-4 py-2 rounded-lg text-xs font-semibold bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors"
@@ -95,7 +97,8 @@ export default function TransporterShipmentCard({
               </button>
             )}
             {onAccept && (
-              <button 
+              <button
+                type="button"
                 onClick={() => onAccept(shipment)}
                 disabled={isUpdating}
                 className="px-4 py-2 rounded-lg text-xs font-semibold bg-success/10 text-success hover:bg-success hover:text-white transition-colors"
@@ -107,7 +110,8 @@ export default function TransporterShipmentCard({
         )}
 
         {shipment.status === "accepted" && onUpdateStatus && (
-          <button 
+          <button
+            type="button"
             onClick={() => onUpdateStatus(shipment, "in_transit")}
             disabled={isUpdating}
             className="px-4 py-2 rounded-lg text-xs font-semibold bg-info/10 text-info hover:bg-info hover:text-white transition-colors"
@@ -117,7 +121,8 @@ export default function TransporterShipmentCard({
         )}
 
         {shipment.status === "in_transit" && onUpdateStatus && (
-          <button 
+          <button
+            type="button"
             onClick={() => onUpdateStatus(shipment, "delivered")}
             disabled={isUpdating}
             className="px-4 py-2 rounded-lg text-xs font-semibold bg-success/10 text-success hover:bg-success hover:text-white transition-colors"
