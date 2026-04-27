@@ -7,9 +7,11 @@
 
 | Nom & Prenom | Role |
 |---|---|
+| Chairi Aymen | Developpeur Full-Stack |
+| Bouchakoura Ala | Developpeur Full-Stack |
 | Wail KIHAL | Developpeur Full-Stack |
-| *(Binome)* | Developpeur Full-Stack |
-| *(Binome)* | Developpeur Full-Stack |
+
+
 ---
 
 ## Mapping du Theme

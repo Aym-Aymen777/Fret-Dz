@@ -58,6 +58,7 @@ export interface Shipment {
   pickup_date?: string;
   delivery_date?: string;
   notes?: string;
+  rejection_reason?: string;
   created_at: string;
   updated_at: string;
   // joins
