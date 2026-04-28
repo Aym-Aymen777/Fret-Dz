@@ -34,9 +34,19 @@ export async function acceptShipmentAction(
     .select("id")
     .eq("id", transporterId)
     .eq("profile_id", user.id)
-    .single();
+    .maybeSingle(); // maybeSingle: returns null (not error) when 0 rows match
 
-  if (tErr || !transporter) {
+  if (tErr) {
+    console.error("[acceptShipmentAction] transporters query error:", tErr);
+    return { error: "Erreur lors de la vérification du profil transporteur" };
+  }
+  if (!transporter) {
+    console.error(
+      "[acceptShipmentAction] transporteur introuvable — transporterId:",
+      transporterId,
+      "user.id:",
+      user.id
+    );
     return { error: "Profil transporteur introuvable ou non autorisé" };
   }
 
@@ -92,9 +102,19 @@ export async function rejectShipmentAction(
     .select("id")
     .eq("id", transporterId)
     .eq("profile_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (tErr || !transporter) {
+  if (tErr) {
+    console.error("[rejectShipmentAction] transporters query error:", tErr);
+    return { error: "Erreur lors de la vérification du profil transporteur" };
+  }
+  if (!transporter) {
+    console.error(
+      "[rejectShipmentAction] transporteur introuvable — transporterId:",
+      transporterId,
+      "user.id:",
+      user.id
+    );
     return { error: "Profil transporteur introuvable ou non autorisé" };
   }
 

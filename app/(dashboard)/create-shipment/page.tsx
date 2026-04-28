@@ -104,15 +104,23 @@ export default function CreateShipmentPage() {
       document:    form.document ?? undefined,
     };
 
-    const { error } = await createShipment(payload);
-
-    if (error) {
-      setApiErr(error);
+    // FIX: wrap in try/catch so any unhandled exception (network error,
+    // Supabase crash, etc.) always resets the submitting flag.
+    // Previously an uncaught exception left submitting=true permanently,
+    // making the submit button permanently disabled (stuck in loading state).
+    try {
+      const { error } = await createShipment(payload);
+      if (error) {
+        setApiErr(error);
+        setSub(false);
+        return;
+      }
+      router.push("/dashboard");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erreur inattendue";
+      setApiErr(msg);
       setSub(false);
-      return;
     }
-
-    router.push("/dashboard");
   };
 
   return (

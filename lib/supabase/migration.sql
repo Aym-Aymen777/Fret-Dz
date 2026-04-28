@@ -306,3 +306,78 @@ create policy "shipments: transporter can reject pending"
       where t.profile_id = auth.uid()
     )
   );
+
+-- =============================================================================
+-- PATCH BLOCK — Run this in Supabase SQL Editor if you see:
+--   • Empty "Transporteurs" page (no transporters listed for clients)
+--   • "Transporteur introuvable" on accept / reject
+-- =============================================================================
+
+-- -- Step 1: Ensure both roles have table-level SELECT grant -------------------
+-- RLS policies control row access, but the role still needs a table grant.
+grant select on public.transporters to anon;
+grant select on public.transporters to authenticated;
+
+-- -- Step 2: Diagnostic queries (uncomment and run to inspect your data) -------
+-- 2a. Check transporter rows and their linked profiles:
+-- SELECT t.id, t.company_name, t.profile_id, p.id AS profile_exists, p.role
+-- FROM   public.transporters t
+-- LEFT   JOIN public.profiles p ON p.id = t.profile_id;
+
+-- 2b. Find transporter-role profiles with NO transporters row (registration bug):
+-- SELECT p.id, p.email, p.full_name
+-- FROM   public.profiles p
+-- LEFT   JOIN public.transporters t ON t.profile_id = p.id
+-- WHERE  p.role = 'transporter' AND t.id IS NULL;
+
+-- -- Step 3: Re-apply critical policies idempotently ---------------------------
+
+drop policy if exists "shipments: transporter sees all pending"   on public.shipments;
+drop policy if exists "shipments: transporter can accept pending" on public.shipments;
+drop policy if exists "shipments: transporter can reject pending" on public.shipments;
+drop policy if exists "profiles: select shipment participants"    on public.profiles;
+
+create policy "shipments: transporter sees all pending"
+  on public.shipments for select
+  using (status = 'pending');
+
+create policy "shipments: transporter can accept pending"
+  on public.shipments for update
+  using (status = 'pending')
+  with check (
+    transporter_id is not null
+    and exists (
+      select 1 from public.transporters t
+      where t.id = transporter_id
+        and t.profile_id = auth.uid()
+    )
+  );
+
+create policy "shipments: transporter can reject pending"
+  on public.shipments for update
+  using (status = 'pending')
+  with check (
+    status = 'rejected'
+    and exists (
+      select 1 from public.transporters t
+      where t.profile_id = auth.uid()
+    )
+  );
+
+create policy "profiles: select shipment participants"
+  on public.profiles for select
+  using (
+    exists (
+      select 1 from public.shipments s
+      where s.client_id = profiles.id
+        and (
+          s.status = 'pending'
+          or exists (
+            select 1 from public.transporters t
+            where t.id = s.transporter_id
+              and t.profile_id = auth.uid()
+          )
+          or s.client_id = auth.uid()
+        )
+    )
+  );

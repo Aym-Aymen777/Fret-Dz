@@ -2,6 +2,13 @@
 // ─────────────────────────────────────────────
 //  Fret-DZ  |  UploadField Component
 //  Drag-and-drop file upload with preview
+//
+//  FIX: replaced `div[role=button] + programmatic .click()` with a semantic
+//  `<label htmlFor>` wrapping the hidden <input type="file">.
+//  Programmatic input.click() is blocked in some browsers when not triggered
+//  directly by a trusted user gesture (e.g. React synthetic onClick on a div).
+//  A <label> click is always a trusted native gesture and always opens the
+//  file picker without any security restriction.
 // ─────────────────────────────────────────────
 import { useRef, useState, useCallback } from "react";
 
@@ -54,8 +61,9 @@ export default function UploadField({
     [validate, onChange]
   );
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragging(false);
     const dropped = e.dataTransfer.files?.[0];
     if (dropped) handleFile(dropped);
@@ -66,7 +74,8 @@ export default function UploadField({
     if (selected) handleFile(selected);
   };
 
-  const remove = () => {
+  const remove = (e: React.MouseEvent) => {
+    e.preventDefault(); // prevent label from re-opening file dialog
     setFile(null);
     setLocalError(null);
     onChange(null);
@@ -82,7 +91,7 @@ export default function UploadField({
 
     return (
       <div className="space-y-1.5">
-        <label className="label">{label}</label>
+        <p className="label">{label}</p>
         <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/5 p-3 animate-fade-in">
           {isImage ? (
             <img
@@ -119,24 +128,31 @@ export default function UploadField({
   }
 
   // ── Empty / drop zone state ──
+  // FIX: use <label htmlFor> instead of div+onClick so clicking always opens
+  // the native file dialog (no programmatic .click() needed).
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="label">{label}</label>
+      <p className="label">{label}</p>
 
-      <div
-        role="button"
-        tabIndex={0}
+      {/* Hidden file input — rendered OUTSIDE the label to avoid double-open */}
+      <input
+        ref={inputRef}
+        id={id}
+        type="file"
+        accept={accept}
+        onChange={handleChange}
+        className="sr-only"
+        aria-label={label}
+        // Prevent any click on the input itself from bubbling up to the form
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      <label
+        htmlFor={id}
         id={`${id}-dropzone`}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragging(true); }}
+        onDragLeave={(e) => { e.stopPropagation(); setDragging(false); }}
         onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault(); // ← Bug 1 fix: prevent native form submission on Enter
-            inputRef.current?.click();
-          }
-        }}
         className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center cursor-pointer transition-all duration-200
           ${dragging
             ? "border-primary-500 bg-primary-500/5 scale-[1.01]"
@@ -165,17 +181,7 @@ export default function UploadField({
             {accept.toUpperCase().replace(/\./g, "").replace(/,/g, ", ")} — max {maxSizeMB} Mo
           </p>
         </div>
-
-        <input
-          ref={inputRef}
-          id={id}
-          type="file"
-          accept={accept}
-          onChange={handleChange}
-          className="sr-only"
-          aria-label={label}
-        />
-      </div>
+      </label>
 
       {displayError && (
         <p className="form-error">
