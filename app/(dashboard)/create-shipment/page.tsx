@@ -23,7 +23,6 @@ const WILAYAS = [
   "Béni Abbès","In Salah","In Guezzam","Touggourt","Djanet","El M'Ghair",
   "El Menia",
 ];
-
 interface FormState {
   title:       string;
   description: string;
@@ -55,7 +54,7 @@ export default function CreateShipmentPage() {
   const [step, setStep]       = useState<Step>(1);
   const [form, setForm]       = useState<FormState>(INITIAL);
   const [errors, setErrors]   = useState<Partial<FormState>>({});
-  const [submitting, setSub]  = useState(false);
+  const [submitting, setSub]  = useState(false); 
   const [apiError, setApiErr] = useState<string | null>(null);
 
   // Controlled field helper
@@ -82,14 +81,17 @@ export default function CreateShipmentPage() {
   };
 
   const next = () => {
-    if (validateStep(step)) setStep((s) => (Math.min(s + 1, 3) as Step));
-  };
+    if (validateStep(step)){
+     setSub(false);
+      setStep((s) => (Math.min(s + 1, 3) as Step));
+    }
+    };
   const prev = () => setStep((s) => (Math.max(s - 1, 1) as Step));
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.SyntheticEvent) => {
+    e?.preventDefault();
     // Step validations already ran via next() — no need to re-validate step 3
-
+         if(step!==3) return
     setSub(true);
     setApiErr(null);
 
@@ -167,7 +169,7 @@ export default function CreateShipmentPage() {
       </div>
 
       {/* ── Form card ── */}
-      <form id="create-shipment-form" onSubmit={handleSubmit} noValidate>
+      <div id="create-shipment-form" onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }} noValidate>
         <div className="card p-6 space-y-5">
 
           {/* ── Step 1: Basic info ── */}
@@ -362,9 +364,10 @@ export default function CreateShipmentPage() {
               </button>
             ) : (
               <button
-                type="submit"
+                type="button"
                 id="submit-shipment"
                 disabled={submitting}
+                onClick={() => handleSubmit()}
                 className="btn-primary btn-lg flex-1"
               >
                 {submitting ? (
@@ -382,7 +385,7 @@ export default function CreateShipmentPage() {
             )}
           </div>
         </div>
-      </form>
+      </div>
     </section>
   );
 }

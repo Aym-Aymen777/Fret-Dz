@@ -1,15 +1,6 @@
 "use client";
 // ─────────────────────────────────────────────
 //  Fret-DZ  |  UploadField Component
-//  Drag-and-drop file upload with preview
-//
-//  FIX: replaced `div[role=button] + programmatic .click()` with a semantic
-//  `<label htmlFor>` wrapping the hidden <input type="file">.
-//  Programmatic input.click() is blocked in some browsers when not triggered
-//  directly by a trusted user gesture (e.g. React synthetic onClick on a div).
-//  A <label> click is always a trusted native gesture and always opens the
-//  file picker without any security restriction.
-// ─────────────────────────────────────────────
 import { useRef, useState, useCallback } from "react";
 
 interface UploadFieldProps {
@@ -150,6 +141,7 @@ export default function UploadField({
       <label
         htmlFor={id}
         id={`${id}-dropzone`}
+        onClick={(e) => e.stopPropagation()}
         onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragging(true); }}
         onDragLeave={(e) => { e.stopPropagation(); setDragging(false); }}
         onDrop={handleDrop}
