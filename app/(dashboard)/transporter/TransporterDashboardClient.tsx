@@ -36,7 +36,7 @@ export default function TransporterDashboardClient({ transporter }: Props) {
     refresh,
     updateShipmentStatus,
   } = useTransporterShipments(transporter?.id);
-
+console.log("[Dashboard] loading:", loading, "pending:", pendingShipments.length);
   const toast = useToast();
 
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
@@ -196,7 +196,10 @@ export default function TransporterDashboardClient({ transporter }: Props) {
           </h2>
           {/* B9 — manual refresh button */}
           <button
-            onClick={refresh}
+            onClick={() => {
+    console.log("[Rafraîchir] clicked");
+    refresh();
+  }}
             disabled={loading}
             className="btn-ghost btn-sm flex items-center gap-1.5 text-xs"
             title="Rafraîchir la liste"

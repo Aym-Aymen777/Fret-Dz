@@ -9,7 +9,7 @@
 //  BUG-11 FIX: realtime channel now uses a scoped channel name and
 //  does not broadcast every shipment mutation to every connected client.
 // ─────────────────────────────────────────────
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback,useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Shipment } from "@/lib/types";
 
@@ -39,14 +39,16 @@ export interface UseTransporterShipmentsReturn {
 export function useTransporterShipments(
   transporterId?: string
 ): UseTransporterShipmentsReturn {
-  const [supabase] = useState(() => createClient());
+  const supabase = useRef(createClient()).current;
   const [pendingShipments, setPendingShipments] = useState<Shipment[]>([]);
   const [myShipments, setMyShipments] = useState<Shipment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchShipments = useCallback(async () => {
+    console.log("[fetch] START - called from:", new Error().stack?.split('\n')[2]);
     setLoading(true);
+    console.log("[useTransporterShipments] fetchShipments called, transporterId:", transporterId);
     setError(null);
 
     // ── 1. All pending shipments (visible to every transporter via RLS) ──────
@@ -80,10 +82,22 @@ export function useTransporterShipments(
     } else {
       setMyShipments([]);
     }
-
-    setLoading(false);
+console.log("[useTransporterShipments] fetchShipments done, pending:", pendingData?.length);
+console.log("[useTransporterShipments] fetchShipments done, pending:", pendingData?.length);   
+console.log("[fetch] END");
+setLoading(false);
   }, [supabase, transporterId]);
+  const fetchShipmentsRef = useRef(fetchShipments);
+useEffect(() => {
+  fetchShipmentsRef.current = fetchShipments;
+}, [fetchShipments]);
+useEffect(() => {
+  console.log("[effect] loading changed:", loading);
+}, [loading]);
 
+useEffect(() => {
+  console.log("[effect] fetchShipments ref changed");
+}, [fetchShipments]);
   /**
    * Generic status update (in_transit, delivered, rejected).
    * For accepting a pending shipment use the server action acceptShipmentAction
@@ -136,47 +150,33 @@ export function useTransporterShipments(
   // transporter_id = NULL), so we subscribe to status=eq.pending for the
   // global feed and to transporter_id=eq.transporterId for assigned ones.
   // Each channel is independent and only refetches when truly relevant.
-  useEffect(() => {
-    const pendingChannel = supabase
-      .channel("transporter-pending-rt")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "shipments",
-          filter: "status=eq.pending",
-        },
-        () => fetchShipments()
-      )
-      .subscribe();
+useEffect(() => {
+  const pendingChannel = supabase
+    .channel("transporter-pending-rt")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "shipments", filter: "status=eq.pending" },
+      () => fetchShipmentsRef.current()
+    )
+    .subscribe();
 
-    return () => {
-      supabase.removeChannel(pendingChannel);
-    };
-  }, [supabase, fetchShipments]);
+  return () => { supabase.removeChannel(pendingChannel); };
+}, [supabase]);
 
-  useEffect(() => {
-    if (!transporterId) return;
+useEffect(() => {
+  if (!transporterId) return;
 
-    const myChannel = supabase
-      .channel(`transporter-mine-rt-${transporterId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "shipments",
-          filter: `transporter_id=eq.${transporterId}`,
-        },
-        () => fetchShipments()
-      )
-      .subscribe();
+  const myChannel = supabase
+    .channel(`transporter-mine-rt-${transporterId}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "shipments", filter: `transporter_id=eq.${transporterId}` },
+      () => fetchShipmentsRef.current()
+    )
+    .subscribe();
 
-    return () => {
-      supabase.removeChannel(myChannel);
-    };
-  }, [supabase, transporterId, fetchShipments]);
+  return () => { supabase.removeChannel(myChannel); };
+}, [supabase, transporterId]);
 
   return {
     pendingShipments,

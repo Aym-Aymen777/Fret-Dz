@@ -7,6 +7,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Shipment, CreateShipmentInput } from "@/lib/types";
+import { deleteShipmentAction } from "@/app/(dashboard)/dashboard/actions";
 
 interface UseShipmentsReturn {
   shipments: Shipment[];
@@ -14,6 +15,7 @@ interface UseShipmentsReturn {
   error: string | null;
   refresh: () => Promise<void>;
   createShipment: (input: CreateShipmentInput) => Promise<{ error: string | null }>;
+  deleteShipment: (shipmentId: string) => Promise<{ error: string | null }>;
 }
 
 export function useShipments(): UseShipmentsReturn {
@@ -21,7 +23,6 @@ export function useShipments(): UseShipmentsReturn {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // BUG-10 FIX: store userId in state so realtime filter can reference it
   const [userId, setUserId] = useState<string | null>(null);
 
   const fetchShipments = useCallback(async () => {
@@ -35,7 +36,6 @@ export function useShipments(): UseShipmentsReturn {
       return;
     }
 
-    // Store for the realtime subscription
     setUserId(userData.user.id);
 
     const { data, error: fetchError } = await supabase
@@ -73,7 +73,6 @@ export function useShipments(): UseShipmentsReturn {
 
       let document_url: string | undefined;
 
-      // ── Upload document if provided ──────────────
       if (input.document) {
         const ext = input.document.name.split(".").pop();
         const fileName = `${userData.user.id}/${Date.now()}.${ext}`;
@@ -94,7 +93,6 @@ export function useShipments(): UseShipmentsReturn {
         document_url = publicUrl.publicUrl;
       }
 
-      // ── Insert shipment row ──────────────────────
       const { error: insertError } = await supabase.from("shipments").insert({
         client_id: userData.user.id,
         title: input.title,
@@ -116,13 +114,23 @@ export function useShipments(): UseShipmentsReturn {
     [supabase, fetchShipments]
   );
 
-  // Initial fetch + real-time subscription
+  // ── Delete shipment (delivered / rejected only) ──
+  const deleteShipment = useCallback(
+    async (shipmentId: string): Promise<{ error: string | null }> => {
+      const result = await deleteShipmentAction(shipmentId);
+      if (!result.error) {
+        // Optimistic removal from local state — revalidatePath handles SSR cache
+        setShipments((prev) => prev.filter((s) => s.id !== shipmentId));
+      }
+      return result;
+    },
+    []
+  );
+
   useEffect(() => {
     fetchShipments();
   }, [fetchShipments]);
 
-  // BUG-10 FIX: add row-level filter so only changes to this user's
-  // shipments trigger a re-fetch — not every shipment in the system.
   useEffect(() => {
     if (!userId) return;
 
@@ -145,5 +153,12 @@ export function useShipments(): UseShipmentsReturn {
     };
   }, [supabase, userId, fetchShipments]);
 
-  return { shipments, loading, error, refresh: fetchShipments, createShipment };
+  return {
+    shipments,
+    loading,
+    error,
+    refresh: fetchShipments,
+    createShipment,
+    deleteShipment,
+  };
 }
