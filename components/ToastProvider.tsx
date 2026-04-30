@@ -87,7 +87,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <div
               key={t.id}
               role="alert"
-              className={`relative flex items-start gap-3 overflow-hidden rounded-xl border border-[var(--border)] shadow-lg px-4 py-3 animate-fade-in ${s.bg}`}
+              className={`relative flex items-start gap-3 overflow-hidden rounded-xl border border-[var(--border)] shadow-lg px-4 py-3 animate-toast-in ${s.bg}`}
             >
               {/* Left accent bar */}
               <span className={`absolute left-0 top-0 h-full w-1 rounded-l-xl ${s.bar}`} />

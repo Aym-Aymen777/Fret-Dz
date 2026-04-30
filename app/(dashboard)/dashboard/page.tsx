@@ -76,7 +76,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── KPI cards ── */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 stagger-children">
         {STATUS_COUNTS.map((status) => (
           <div key={status} className="card card-body flex flex-col gap-2">
             <StatusBadge status={status} size="sm" />
@@ -110,7 +110,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
             {shipments.map((shipment) => (
               <ShipmentCard key={shipment.id} shipment={shipment} />
             ))}

@@ -154,7 +154,7 @@ console.log("[Dashboard] loading:", loading, "pending:", pendingShipments.length
       )}
 
       {/* ── Quick Stats ── */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3 stagger-children">
         <div className="card card-body flex flex-col gap-2 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10 text-4xl">🔔</div>
           <p className="text-2xs font-medium uppercase tracking-wide text-[var(--fg-muted)]">
@@ -237,7 +237,7 @@ console.log("[Dashboard] loading:", loading, "pending:", pendingShipments.length
             </div>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 stagger-children">
             {pendingShipments.map((shipment) => (
               <TransporterShipmentCard
                 key={shipment.id}
@@ -264,7 +264,7 @@ console.log("[Dashboard] loading:", loading, "pending:", pendingShipments.length
             Aucune expédition en cours.
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 stagger-children">
             {/* B6 — filter from myShipments */}
             {myShipments
               .filter(s => s.status === "accepted" || s.status === "in_transit")

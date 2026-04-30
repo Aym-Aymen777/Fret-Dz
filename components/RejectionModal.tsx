@@ -55,12 +55,12 @@ export default function RejectionModal({ isOpen, onClose, onConfirm, isSubmittin
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-label="Rejeter l'expédition"
     >
-      <div className="bg-[var(--bg)] w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="bg-[var(--bg)] w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col modal-panel">
         <div className="p-6 border-b border-[var(--border)]">
           <h2 className="text-xl font-display font-bold text-[var(--fg)]">
             Rejeter l&apos;expédition

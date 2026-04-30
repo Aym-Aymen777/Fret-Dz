@@ -30,12 +30,12 @@ export default function ShipmentDetailsModal({ shipment, isOpen, onClose }: Prop
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-label="Détails de l'expédition"
     >
-      <div className="bg-[var(--bg)] w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-[var(--bg)] w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] modal-panel">
         <div className="flex items-center justify-between p-6 border-b border-[var(--border)]">
           <h2 className="text-xl font-display font-bold text-[var(--fg)]">
             Détails de l&apos;expédition
