@@ -68,8 +68,8 @@ function LoginPageInner() {
     <main className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">
       {/* Background blobs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-primary-500/10 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-secondary/10 blur-3xl" />
+        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-primary-500/10 blur-3xl animate-float" />
+        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-secondary/10 blur-3xl animate-float-delayed" />
         <div className="absolute inset-0 bg-dot-pattern opacity-30" />
       </div>
 
