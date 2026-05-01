@@ -10,7 +10,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import type { UserRole } from "@/lib/types";
+import type { UserRole, Profile } from "@/lib/types";
+import type { User } from "@supabase/supabase-js";
 
 interface NavLink {
   href: string;
@@ -139,11 +140,15 @@ const ICONS: Record<string, React.ReactNode> = {
   ),
 };
 
-export default function Navbar() {
+interface NavbarProps {
+  initialUser?: User | null;
+  initialProfile?: Profile | null;
+}
+
+export default function Navbar({ initialUser = null, initialProfile = null }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  // BUG-16 FIX: single hook — no more double onAuthStateChange subscription
-  const { user, role, loading, profile } = useUserProfile();
+  const { user, role, loading, profile } = useUserProfile({ initialUser, initialProfile });
   const [dark, setDark] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -174,12 +179,13 @@ export default function Navbar() {
   };
 
   const handleSignOut = async () => {
-    // Import createClient here to avoid stale closure — useUserProfile
-    // does not expose signOut so we call Supabase directly.
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/login");
+    // Full reload so the server re-reads the cleared session cookie.
+    // router.push() would do a client-side navigation and may serve a
+    // cached server component that still shows the authenticated layout.
+    window.location.href = "/login";
   };
 
   const initials = profile?.full_name
