@@ -4,7 +4,7 @@
 //  Client Component — multi-step form with
 //  file upload and real-time validation
 // ─────────────────────────────────────────────
-import { useState, FormEvent } from "react";
+import React, { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import UploadField from "@/components/UploadField";
 import { useShipments } from "@/hooks/useShipments";
@@ -138,33 +138,38 @@ export default function CreateShipmentPage() {
       </div>
 
       {/* ── Step indicator ── */}
-      <div className="flex items-center gap-0">
+      <div className="flex items-start w-full">
         {STEPS.map((s, i) => (
-          <div key={s.id} className="flex flex-1 items-center">
-            <button
-              type="button"
-              onClick={() => step > s.id && setStep(s.id as Step)}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-200
-                ${step === s.id
-                  ? "border-primary-500 bg-primary-500 text-white scale-110 shadow-glow"
-                  : step > s.id
-                  ? "border-primary-500 bg-primary-500/10 text-primary-500 cursor-pointer hover:bg-primary-500/20"
-                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)]"
-                }`}
-            >
-              {step > s.id ? "✓" : s.icon}
-            </button>
-            <div className="min-w-0 flex-1 px-2">
-              <p className={`text-xs font-medium hidden sm:block truncate transition-colors
+          <React.Fragment key={s.id}>
+            {/* Circle + label */}
+            <div className="flex flex-col items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => step > s.id && setStep(s.id as Step)}
+                className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-200
+                  ${step === s.id
+                    ? "border-primary-500 bg-primary-500 text-white scale-110 shadow-glow"
+                    : step > s.id
+                    ? "border-primary-500 bg-primary-500/10 text-primary-500 cursor-pointer hover:bg-primary-500/20"
+                    : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)]"
+                  }`}
+              >
+                {step > s.id ? "✓" : s.icon}
+              </button>
+              <span className={`hidden sm:block text-xs font-medium text-center transition-colors leading-tight
                 ${step === s.id ? "text-primary-500" : "text-[var(--fg-muted)]"}`}>
                 {s.label}
-              </p>
+              </span>
             </div>
+
+            {/* Connector line between steps only */}
             {i < STEPS.length - 1 && (
-              <div className={`h-0.5 w-8 shrink-0 rounded-full transition-all duration-300
-                ${step > s.id ? "bg-primary-500" : "bg-[var(--border)]"}`} />
+              <div className="flex-1 flex items-center pt-5">
+                <div className={`h-0.5 w-full rounded-full transition-all duration-300
+                  ${step > s.id ? "bg-primary-500" : "bg-[var(--border)]"}`} />
+              </div>
             )}
-          </div>
+          </React.Fragment>
         ))}
       </div>
 
