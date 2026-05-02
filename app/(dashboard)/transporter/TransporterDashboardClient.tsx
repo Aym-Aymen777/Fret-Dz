@@ -145,7 +145,7 @@ console.log("[Dashboard] loading:", loading, "pending:", pendingShipments.length
           <span className="flex-1">{error}</span>
           {/* B9 — manual refresh */}
           <button
-            onClick={refresh}
+            onClick={() => window.location.reload()}
             className="shrink-0 rounded-lg bg-danger/20 px-3 py-1 text-xs font-semibold hover:bg-danger/30 transition-colors"
           >
             Réessayer
@@ -198,9 +198,9 @@ console.log("[Dashboard] loading:", loading, "pending:", pendingShipments.length
           <button
             onClick={() => {
     console.log("[Rafraîchir] clicked");
-    refresh();
+    window.location.reload();
   }}
-            disabled={loading}
+            
             className="btn-ghost btn-sm flex items-center gap-1.5 text-xs"
             title="Rafraîchir la liste"
           >
