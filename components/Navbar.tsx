@@ -243,20 +243,33 @@ export default function Navbar({ initialUser = null, initialProfile = null }: Na
             </button>
 
             {/* User avatar / signout */}
-            {!loading && user && (
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-accent text-xs font-bold text-white shrink-0">
-                  {initials}
-                </div>
-                <button
-                  id="signout-btn"
-                  onClick={handleSignOut}
-                  className="btn-ghost btn-sm hidden sm:flex items-center gap-1.5 text-[var(--fg-muted)]">
-                  {ICONS.logout}
-                  Déconnexion
-                </button>
-              </div>
-            )}
+            {/* User avatar / signout */}
+{!loading && user && (
+  <div className="flex items-center gap-2">
+    <Link
+      href="/profile"
+      className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-accent text-xs font-bold text-white shrink-0 overflow-hidden ring-2 ring-transparent hover:ring-primary-500 transition-all"
+      title="Mon profil"
+    >
+      {profile?.avatar_url ? (
+        <img
+          src={`${profile.avatar_url}?t=${profile.updated_at}`}
+          alt="Avatar"
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        initials
+      )}
+    </Link>
+    <button
+      id="signout-btn"
+      onClick={handleSignOut}
+      className="btn-ghost btn-sm hidden sm:flex items-center gap-1.5 text-[var(--fg-muted)]">
+      {ICONS.logout}
+      Déconnexion
+    </button>
+  </div>
+)}
 
             {/* Mobile hamburger */}
             <button
