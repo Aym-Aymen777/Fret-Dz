@@ -9,23 +9,35 @@ create extension if not exists "uuid-ossp";
 
 -- ─── Enums ───────────────────────────────────
 
-create type user_role as enum ('client', 'transporter');
+DO $$ BEGIN
+    create type public.user_role as enum ('client', 'transporter');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-create type shipment_status as enum (
-  'pending',
-  'accepted',
-  'in_transit',
-  'delivered',
-  'rejected'
-);
+DO $$ BEGIN
+    create type public.shipment_status as enum (
+      'pending',
+      'accepted',
+      'in_transit',
+      'delivered',
+      'rejected'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-create type vehicle_type as enum (
-  'van',
-  'truck',
-  'semi',
-  'pickup',
-  'motorcycle'
-);
+DO $$ BEGIN
+    create type public.vehicle_type as enum (
+      'van',
+      'truck',
+      'semi',
+      'pickup',
+      'motorcycle'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- ─────────────────────────────────────────────
 --  Shared trigger: auto-update updated_at
@@ -70,12 +82,15 @@ begin
     new.email,
     coalesce(new.raw_user_meta_data->>'full_name', ''),
     new.raw_user_meta_data->>'phone',
-    new.raw_user_meta_data->>'company_name',
-    coalesce((new.raw_user_meta_data->>'role')::user_role, 'client')
+    NULLIF(new.raw_user_meta_data->>'company_name', ''),
+    case new.raw_user_meta_data->>'role'
+      when 'transporter' then 'transporter'::public.user_role
+      else 'client'::public.user_role
+    end
   );
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 create trigger on_auth_user_created
   after insert on auth.users
@@ -99,7 +114,7 @@ create policy "profiles: update own"
 
 create table public.transporters (
   id            uuid        primary key default uuid_generate_v4(),
-  profile_id    uuid        not null references public.profiles(id) on delete cascade,
+  profile_id    uuid        not null,
   company_name  text        not null,
   description   text,
   vehicle_type  vehicle_type not null,
@@ -111,7 +126,9 @@ create table public.transporters (
   wilaya        text        not null,
   logo_url      text,
   phone         text        not null,
-  created_at    timestamptz not null default now()
+  created_at    timestamptz not null default now(),
+
+  constraint transporters_profile_id_fkey foreign key (profile_id) references public.profiles(id) on delete cascade
 );
 
 create index transporters_profile_id_idx  on public.transporters(profile_id);
@@ -139,8 +156,8 @@ create policy "transporters: update own"
 
 create table public.shipments (
   id               uuid           primary key default uuid_generate_v4(),
-  client_id        uuid           not null references public.profiles(id) on delete cascade,
-  transporter_id   uuid           references public.transporters(id) on delete set null,
+  client_id        uuid           not null,
+  transporter_id   uuid,
   title            text           not null,
   description      text,
   origin           text           not null,
@@ -154,7 +171,10 @@ create table public.shipments (
   notes            text,
   rejection_reason text,
   created_at       timestamptz    not null default now(),
-  updated_at       timestamptz    not null default now()
+  updated_at       timestamptz    not null default now(),
+
+  constraint shipments_client_id_fkey foreign key (client_id) references public.profiles(id) on delete cascade,
+  constraint shipments_transporter_id_fkey foreign key (transporter_id) references public.transporters(id) on delete set null
 );
 
 create trigger shipments_updated_at
@@ -308,9 +328,9 @@ create policy "shipments: transporter can reject pending"
   );
 
 -- =============================================================================
--- PATCH BLOCK � Run this in Supabase SQL Editor if you see:
---   � Empty "Transporteurs" page (no transporters listed for clients)
---   � "Transporteur introuvable" on accept / reject
+-- PATCH BLOCK � Run this in Supabase SQL Editor if you see:
+--   � Empty "Transporteurs" page (no transporters listed for clients)
+--   � "Transporteur introuvable" on accept / reject
 -- =============================================================================
 
 -- -- Step 1: Ensure both roles have table-level SELECT grant -------------------

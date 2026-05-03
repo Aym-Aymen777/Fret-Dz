@@ -4,7 +4,7 @@
 //  Fetches & manages the current user's shipments
 //  from Supabase in real-time.
 // ─────────────────────────────────────────────
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Shipment, CreateShipmentInput } from "@/lib/types";
 import { deleteShipmentAction } from "@/app/(dashboard)/dashboard/actions";
@@ -14,7 +14,9 @@ interface UseShipmentsReturn {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  createShipment: (input: CreateShipmentInput) => Promise<{ error: string | null }>;
+  createShipment: (
+    input: CreateShipmentInput,
+  ) => Promise<{ error: string | null }>;
   deleteShipment: (shipmentId: string) => Promise<{ error: string | null }>;
 }
 
@@ -24,6 +26,14 @@ export function useShipments(): UseShipmentsReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const fetchShipments = useCallback(async () => {
     setLoading(true);
@@ -52,7 +62,7 @@ export function useShipments(): UseShipmentsReturn {
           phone,
           wilaya
         )
-      `
+      `,
       )
       .eq("client_id", userData.user.id)
       .order("created_at", { ascending: false });
@@ -66,52 +76,127 @@ export function useShipments(): UseShipmentsReturn {
     setLoading(false);
   }, [supabase]);
 
-  const createShipment = useCallback(
-    async (input: CreateShipmentInput): Promise<{ error: string | null }> => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return { error: "Not authenticated" };
+  const backgroundUpload = useCallback(
+    async (shipmentId: string, document: File, clientId: string) => {
+      const ext = document.name.split(".").pop();
+      const fileName = `${clientId}/${Date.now()}.${ext}`;
 
-      let document_url: string | undefined;
+      const { error: uploadError } = await supabase.storage
+        .from("shipment-documents")
+        .upload(fileName, document, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
-      if (input.document) {
-        const ext = input.document.name.split(".").pop();
-        const fileName = `${userData.user.id}/${Date.now()}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("shipment-documents")
-          .upload(fileName, input.document, {
-            cacheControl: "3600",
-            upsert: false,
-          });
-
-        if (uploadError) return { error: uploadError.message };
-
-        const { data: publicUrl } = supabase.storage
-          .from("shipment-documents")
-          .getPublicUrl(fileName);
-
-        document_url = publicUrl.publicUrl;
+      if (uploadError) {
+        if (mountedRef.current) {
+          setError(`Document upload failed: ${uploadError.message}`);
+        }
+        return;
       }
 
-      const { error: insertError } = await supabase.from("shipments").insert({
-        client_id: userData.user.id,
+      const { data: publicUrl } = supabase.storage
+        .from("shipment-documents")
+        .getPublicUrl(fileName);
+
+      const document_url = publicUrl.publicUrl;
+      const { error: updateError } = await supabase
+        .from("shipments")
+        .update({ document_url })
+        .eq("id", shipmentId);
+
+      if (updateError) {
+        if (mountedRef.current) {
+          setError(`Document link update failed: ${updateError.message}`);
+        }
+      } else if (mountedRef.current) {
+        setShipments((prev) =>
+          prev.map((shipment) =>
+            shipment.id === shipmentId
+              ? { ...shipment, document_url }
+              : shipment,
+          ),
+        );
+      }
+    },
+    [supabase],
+  );
+
+  const createShipment = useCallback(
+    async (input: CreateShipmentInput): Promise<{ error: string | null }> => {
+      console.time("TOTAL");
+
+      let currentUserId = userId;
+      if (!currentUserId) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) {
+          console.timeEnd("TOTAL");
+          return { error: "Not authenticated" };
+        }
+        currentUserId = userData.user.id;
+        setUserId(currentUserId);
+      }
+
+      console.time("INSERT");
+      const { data: insertedShipment, error: insertError } = await supabase
+        .from("shipments")
+        .insert({
+          client_id: currentUserId,
+          title: input.title,
+          description: input.description,
+          origin: input.origin,
+          destination: input.destination,
+          weight_kg: input.weight_kg,
+          pickup_date: input.pickup_date,
+          notes: input.notes,
+          status: "pending",
+        })
+        .select()
+        .single();
+      console.timeEnd("INSERT");
+
+      if (insertError || !insertedShipment) {
+        console.timeEnd("TOTAL");
+        return { error: insertError?.message ?? "Failed to create shipment" };
+      }
+
+      const optimisticShipment: Shipment = {
+        id: insertedShipment.id,
+        client_id: currentUserId,
         title: input.title,
         description: input.description,
         origin: input.origin,
         destination: input.destination,
         weight_kg: input.weight_kg,
+        status: "pending",
         pickup_date: input.pickup_date,
         notes: input.notes,
-        document_url,
-        status: "pending",
-      });
+        document_url: undefined,
+        created_at: insertedShipment.created_at ?? new Date().toISOString(),
+        updated_at:
+          insertedShipment.updated_at ??
+          insertedShipment.created_at ??
+          new Date().toISOString(),
+      };
 
-      if (insertError) return { error: insertError.message };
+      setShipments((prev) => [optimisticShipment, ...prev]);
 
-      await fetchShipments();
+      console.time("UPLOAD");
+      if (input.document) {
+        void backgroundUpload(
+          optimisticShipment.id,
+          input.document,
+          currentUserId,
+        );
+      }
+      console.timeEnd("UPLOAD");
+
+      console.time("FETCH");
+      console.timeEnd("FETCH");
+      console.timeEnd("TOTAL");
       return { error: null };
     },
-    [supabase, fetchShipments]
+    [backgroundUpload, supabase, userId],
   );
 
   // ── Delete shipment (delivered / rejected only) ──
@@ -124,11 +209,13 @@ export function useShipments(): UseShipmentsReturn {
       }
       return result;
     },
-    []
+    [],
   );
 
   useEffect(() => {
-    fetchShipments();
+    void (async () => {
+      await fetchShipments();
+    })();
   }, [fetchShipments]);
 
   useEffect(() => {
@@ -144,7 +231,7 @@ export function useShipments(): UseShipmentsReturn {
           table: "shipments",
           filter: `client_id=eq.${userId}`,
         },
-        () => fetchShipments()
+        () => fetchShipments(),
       )
       .subscribe();
 

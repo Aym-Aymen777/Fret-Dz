@@ -15,7 +15,7 @@ import type { Shipment } from "@/lib/types";
 
 const CLIENT_SELECT = `
   *,
-  client:profiles!shipments_client_id_fkey (
+  client:profiles!client_id (
     full_name,
     phone,
     company_name,
@@ -52,6 +52,7 @@ export function useTransporterShipments(
     setError(null);
 
     // ── 1. All pending shipments (visible to every transporter via RLS) ──────
+    console.log("[useTransporterShipments] Fetching pending shipments...");
     const { data: pendingData, error: pendingErr } = await supabase
       .from("shipments")
       .select(CLIENT_SELECT)
@@ -59,14 +60,17 @@ export function useTransporterShipments(
       .order("created_at", { ascending: false });
 
     if (pendingErr) {
+      console.error("[useTransporterShipments] Pending fetch error:", pendingErr);
       setError(pendingErr.message);
       setLoading(false);
       return;
     }
+    console.log("[useTransporterShipments] Pending data received:", pendingData?.length);
     setPendingShipments((pendingData as unknown as Shipment[]) ?? []);
 
     // ── 2. This transporter's own non-pending shipments ──────────────────────
     if (transporterId) {
+      console.log("[useTransporterShipments] Fetching my shipments for ID:", transporterId);
       const { data: myData, error: myErr } = await supabase
         .from("shipments")
         .select(CLIENT_SELECT)
@@ -75,11 +79,14 @@ export function useTransporterShipments(
         .order("created_at", { ascending: false });
 
       if (myErr) {
+        console.error("[useTransporterShipments] My shipments fetch error:", myErr);
         setError(myErr.message);
       } else {
+        console.log("[useTransporterShipments] My shipments received:", myData?.length);
         setMyShipments((myData as unknown as Shipment[]) ?? []);
       }
     } else {
+      console.log("[useTransporterShipments] No transporterId, skipping 'my shipments' fetch.");
       setMyShipments([]);
     }
 console.log("[useTransporterShipments] fetchShipments done, pending:", pendingData?.length);
