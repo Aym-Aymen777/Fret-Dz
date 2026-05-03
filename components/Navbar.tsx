@@ -190,9 +190,13 @@ export default function Navbar({
         <nav className="page-container flex h-16 items-center justify-between gap-4">
           {/* ── Logo — href adapts to role ── */}
           <Link href={homeHref} className="flex items-center gap-2 shrink-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500 shadow-glow">
-              <span className="text-sm font-black text-white">F</span>
-            </div>
+           <img
+  src="/logo.png"
+  alt="Fret-DZ Logo"
+  className="h-15 w-auto"
+  width={40}
+  height={40}
+/>
             <span className="font-display text-xl font-bold text-[var(--fg)]">
               Fret<span className="text-gradient-primary">-DZ</span>
             </span>
