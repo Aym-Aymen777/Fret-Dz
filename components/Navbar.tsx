@@ -6,9 +6,10 @@
 //  BUG-16 FIX: removed duplicate useSession call. useUserProfile already
 //  exposes user + loading + signOut, so we only need one hook here.
 // ─────────────────────────────────────────────
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useDarkMode } from "@/hooks/useDarkMode";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import type { UserRole, Profile } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
@@ -145,40 +146,27 @@ interface NavbarProps {
   initialProfile?: Profile | null;
 }
 
-export default function Navbar({ initialUser = null, initialProfile = null }: NavbarProps) {
+export default function Navbar({
+  initialUser = null,
+  initialProfile = null,
+}: NavbarProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { user, role, loading, profile } = useUserProfile({ initialUser, initialProfile });
-  const [dark, setDark] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-
-    const saved = localStorage.getItem("fretdz-theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    return saved ? saved === "dark" : prefersDark;
+  const { user, role, loading, profile } = useUserProfile({
+    initialUser,
+    initialProfile,
   });
+  const { dark, toggleDark } = useDarkMode();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Get nav links for current role — empty array while loading to avoid flicker
   const visibleLinks = !loading
-    ? NAV_LINKS.filter((link) => !link.roles || (role !== null && link.roles.includes(role)))
+    ? NAV_LINKS.filter(
+        (link) => !link.roles || (role !== null && link.roles.includes(role)),
+      )
     : [];
 
   // Home link depends on role
   const homeHref = role === "transporter" ? "/transporter" : "/dashboard";
-
-  // Sync dark mode with document class
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-  }, [dark]);
-
-  const toggleDark = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("fretdz-theme", next ? "dark" : "light");
-  };
 
   const handleSignOut = async () => {
     const { createClient } = await import("@/lib/supabase/client");
@@ -193,8 +181,8 @@ export default function Navbar({ initialUser = null, initialProfile = null }: Na
   const initials = profile?.full_name
     ? profile.full_name.substring(0, 2).toUpperCase()
     : user?.email
-    ? user.email.substring(0, 2).toUpperCase()
-    : "?";
+      ? user.email.substring(0, 2).toUpperCase()
+      : "?";
 
   return (
     <>
@@ -246,32 +234,31 @@ export default function Navbar({ initialUser = null, initialProfile = null }: Na
 
             {/* User avatar / signout */}
             {/* User avatar / signout */}
-{!loading && user && (
-  <div className="flex items-center gap-2">
-    <Link
-      href="/profile"
-      className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-accent text-xs font-bold text-white shrink-0 overflow-hidden ring-2 ring-transparent hover:ring-primary-500 transition-all"
-      title="Mon profil"
-    >
-      {profile?.avatar_url ? (
-        <img
-          src={`${profile.avatar_url}?t=${profile.updated_at}`}
-          alt="Avatar"
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        initials
-      )}
-    </Link>
-    <button
-      id="signout-btn"
-      onClick={handleSignOut}
-      className="btn-ghost btn-sm hidden sm:flex items-center gap-1.5 text-[var(--fg-muted)]">
-      {ICONS.logout}
-      Déconnexion
-    </button>
-  </div>
-)}
+            {!loading && user && (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/profile"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-accent text-xs font-bold text-white shrink-0 overflow-hidden ring-2 ring-transparent hover:ring-primary-500 transition-all"
+                  title="Mon profil">
+                  {profile?.avatar_url ? (
+                    <img
+                      src={`${profile.avatar_url}?t=${profile.updated_at}`}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    initials
+                  )}
+                </Link>
+                <button
+                  id="signout-btn"
+                  onClick={handleSignOut}
+                  className="btn-ghost btn-sm hidden sm:flex items-center gap-1.5 text-[var(--fg-muted)]">
+                  {ICONS.logout}
+                  Déconnexion
+                </button>
+              </div>
+            )}
 
             {/* Mobile hamburger */}
             <button
