@@ -149,7 +149,15 @@ export default function Navbar({ initialUser = null, initialProfile = null }: Na
   const pathname = usePathname();
   const router = useRouter();
   const { user, role, loading, profile } = useUserProfile({ initialUser, initialProfile });
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    const saved = localStorage.getItem("fretdz-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return saved ? saved === "dark" : prefersDark;
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Get nav links for current role — empty array while loading to avoid flicker
@@ -160,16 +168,10 @@ export default function Navbar({ initialUser = null, initialProfile = null }: Na
   // Home link depends on role
   const homeHref = role === "transporter" ? "/transporter" : "/dashboard";
 
-  // Sync dark mode from localStorage
+  // Sync dark mode with document class
   useEffect(() => {
-    const saved = localStorage.getItem("fretdz-theme");
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-    const isDark = saved ? saved === "dark" : prefersDark;
-    setDark(isDark);
-    document.documentElement.classList.toggle("dark", isDark);
-  }, []);
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
 
   const toggleDark = () => {
     const next = !dark;

@@ -174,7 +174,7 @@ export default function CreateShipmentPage() {
       </div>
 
       {/* ── Form card ── */}
-      <div id="create-shipment-form" onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }} noValidate>
+      <form id="create-shipment-form" onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }} noValidate>
         <div className="card p-6 space-y-5">
 
           {/* ── Step 1: Basic info ── */}
@@ -390,7 +390,7 @@ export default function CreateShipmentPage() {
             )}
           </div>
         </div>
-      </div>
+      </form>
     </section>
   );
 }
