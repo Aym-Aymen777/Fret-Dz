@@ -23,6 +23,7 @@ interface NavLink {
 
 const CLIENT_NAV_LINKS: NavLink[] = [
   { href: "/dashboard", label: "Dashboard", icon: "grid", roles: ["client"] },
+  { href: "/expeditions", label: "Expéditions", icon: "package", roles: ["client"] },
   {
     href: "/transporters",
     label: "Transporteurs",
@@ -136,6 +137,20 @@ const ICONS: Record<string, React.ReactNode> = {
         strokeLinejoin="round"
         strokeWidth={2}
         d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+      />
+    </svg>
+  ),
+  package: (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
       />
     </svg>
   ),

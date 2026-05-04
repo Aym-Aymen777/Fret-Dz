@@ -41,28 +41,26 @@ export function useTransporterShipments(
     return () => { mountedRef.current = false; };
   }, []);
 
-  // BUG-1 FIX: moved BELOW setLoading so the guard never traps loading=true
   const isFetchingRef = useRef(false);
 
   const fetchShipments = useCallback(async () => {
-     // ── Guard: ensure we have an authenticated session before hitting RLS ──
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    if (mountedRef.current) {
-      setLoading(false);
-      setError("Session expirée. Veuillez vous reconnecter.");
-    }
-    return;
-  }
-    // BUG-1 FIX: guard checked BEFORE setLoading — never sets loading=true
-    // if we're going to bail out immediately
+    // ── Concurrency guard: must be the very first check (synchronous) ──────
+    // If we bail here, setLoading(true) was never called → no stuck state.
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
 
-    setLoading(true);
-    setError(null);
-
     try {
+      setLoading(true);   // ← only reached when the guard passed
+      setError(null);
+
+      // ── Session check before any RLS-protected query ───────────────────
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        if (mountedRef.current) {
+          setError("Session expirée. Veuillez vous reconnecter.");
+        }
+        return;
+      }
       // ── 1. All pending shipments ─────────────────────────────────────────
       const { data: pendingData, error: pendingErr } = await supabase
         .from("shipments")
@@ -70,7 +68,7 @@ export function useTransporterShipments(
         .eq("status", "pending")
         .order("created_at", { ascending: false });
 
-      if (!mountedRef.current) return; // BUG-1 FIX: isFetchingRef reset in finally
+      if (!mountedRef.current) return;
 
       if (pendingErr) {
         setError(pendingErr.message);
@@ -99,7 +97,7 @@ export function useTransporterShipments(
         setMyShipments([]);
       }
     } finally {
-      // BUG-1 FIX: ALWAYS reset both flags, even if we returned early above
+      // Always reset both flags — guarantees no stuck loading state
       isFetchingRef.current = false;
       if (mountedRef.current) setLoading(false);
     }
@@ -142,7 +140,6 @@ export function useTransporterShipments(
     [supabase, fetchShipments]
   );
 
-  // BUG-2 FIX: depend on fetchShipments (stable via useCallback) not just transporterId
   useEffect(() => {
     fetchShipments();
   }, [fetchShipments]);

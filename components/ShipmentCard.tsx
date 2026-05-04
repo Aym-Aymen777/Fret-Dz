@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────
 import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import type { Shipment } from "@/lib/types";
 import StatusBadge from "./StatusBadge";
 import { deleteShipmentAction } from "@/app/(dashboard)/dashboard/actions";
@@ -56,9 +57,9 @@ export default function ShipmentCard({ shipment, onDeleted }: ShipmentCardProps)
         {/* ── Top row ── */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate text-base font-bold text-[var(--fg)] group-hover:text-primary-500 transition-colors">
+            <Link href={`/dashboard/${shipment.id}`} className="truncate text-base font-bold text-[var(--fg)] group-hover:text-primary-500 transition-colors hover:underline">
               {shipment.title}
-            </h3>
+            </Link>
             <p className="text-sm text-[var(--fg-muted)]">
               Créé le {formatDate(shipment.created_at)}
             </p>
@@ -162,6 +163,7 @@ export default function ShipmentCard({ shipment, onDeleted }: ShipmentCardProps)
             ⚠️ {deleteError}
           </p>
         )}
+
       </article>
 
       {/* ── Confirm dialog — portaled to document.body to escape any clipping parent ── */}

@@ -66,7 +66,7 @@ export default async function HomePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </Link>
-            <Link href="/demo" className="btn-outline btn-lg">Voir la démo</Link>
+            <Link href="/login" className="btn-outline btn-lg">Connexion</Link>
           </div>
         </div>
 

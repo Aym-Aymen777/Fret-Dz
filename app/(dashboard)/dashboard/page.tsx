@@ -9,7 +9,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import ShipmentCard from "@/components/ShipmentCard";
 import StatusBadge from "@/components/StatusBadge";
-import type { Shipment, ShipmentStatus } from "@/lib/types";
+import TransporterCard from "@/components/TransporterCard";
+import type { Shipment, ShipmentStatus, Transporter } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -26,6 +27,17 @@ async function getShipments(userId: string): Promise<Shipment[]> {
     .order("created_at", { ascending: false })
     .limit(20);
   return (data as Shipment[]) ?? [];
+}
+
+async function getTopTransporters(): Promise<Transporter[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("transporters")
+    .select("*")
+    .eq("is_available", true)
+    .order("rating", { ascending: false })
+    .limit(3);
+  return (data as Transporter[]) ?? [];
 }
 
 export default async function DashboardPage() {
@@ -45,7 +57,10 @@ export default async function DashboardPage() {
     }
   }
 
-  const shipments = user ? await getShipments(user.id) : [];
+  const [shipments, topTransporters] = await Promise.all([
+    user ? getShipments(user.id) : Promise.resolve([]),
+    getTopTransporters(),
+  ]);
 
   // Compute stats
   const stats = STATUS_COUNTS.reduce(
@@ -117,6 +132,25 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* ── Top transporters ── */}
+      {topTransporters.length > 0 && (
+        <div>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-display text-xl font-bold text-[var(--fg)]">
+              Transporteurs disponibles
+            </h2>
+            <Link href="/transporters" className="text-sm font-semibold text-primary-500 hover:underline">
+              Voir tous →
+            </Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
+            {topTransporters.map((transporter) => (
+              <TransporterCard key={transporter.id} transporter={transporter} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Quick links ── */}
       <div className="grid gap-4 sm:grid-cols-2">
