@@ -187,15 +187,15 @@ const handleSignOut = async () => {
   const { createClient } = await import("@/lib/supabase/client");
   const supabase = createClient();
 
-  // 1. Sign out from Supabase
-  await supabase.auth.signOut();
-
-  // 2. Clear all cookies manually (client-side)
+  
+  // 1. Clear all cookies manually (client-side)
   document.cookie.split(";").forEach((cookie) => {
     const name = cookie.split("=")[0].trim();
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
   });
-
+  
+  // 2. Sign out from Supabase
+  await supabase.auth.signOut();
   // 3. Optional: clear localStorage/sessionStorage
   localStorage.clear();
   sessionStorage.clear();
