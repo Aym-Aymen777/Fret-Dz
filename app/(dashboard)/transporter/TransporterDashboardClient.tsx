@@ -196,7 +196,7 @@ console.log("[Dashboard] loading:", loading, "pending:", pendingShipments.length
           </h2>
           {/* B9 — manual refresh button */}
           <button
-            onClick={() => refresh()}
+            onClick={()=>window.location.reload()}
             
             className="btn-ghost btn-sm flex items-center gap-1.5 text-xs"
             title="Rafraîchir la liste"
