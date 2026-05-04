@@ -42,13 +42,22 @@ export function useTransporterShipments(
   const [supabase] = useState(() => createClient());
   const [pendingShipments, setPendingShipments] = useState<Shipment[]>([]);
   const [myShipments, setMyShipments] = useState<Shipment[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const isFetchingRef = useRef(false);
+
   const fetchShipments = useCallback(async () => {
-    console.log("[fetch] START - called from:", new Error().stack?.split('\n')[2]);
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    
     setLoading(true);
-    console.log("[useTransporterShipments] fetchShipments called, transporterId:", transporterId);
     setError(null);
 
     // ── 1. All pending shipments (visible to every transporter via RLS) ──────
@@ -60,12 +69,15 @@ export function useTransporterShipments(
       .order("created_at", { ascending: false });
 
     if (pendingErr) {
-      console.error("[useTransporterShipments] Pending fetch error:", pendingErr);
-      setError(pendingErr.message);
-      setLoading(false);
+      if (mountedRef.current) {
+        setError(pendingErr.message);
+        setLoading(false);
+      }
+      isFetchingRef.current = false;
       return;
     }
-    console.log("[useTransporterShipments] Pending data received:", pendingData?.length);
+
+    if (!mountedRef.current) return;
     setPendingShipments((pendingData as unknown as Shipment[]) ?? []);
 
     // ── 2. This transporter's own non-pending shipments ──────────────────────
@@ -79,18 +91,16 @@ export function useTransporterShipments(
         .order("created_at", { ascending: false });
 
       if (myErr) {
-        console.error("[useTransporterShipments] My shipments fetch error:", myErr);
-        setError(myErr.message);
+        if (mountedRef.current) setError(myErr.message);
       } else {
-        console.log("[useTransporterShipments] My shipments received:", myData?.length);
-        setMyShipments((myData as unknown as Shipment[]) ?? []);
+        if (mountedRef.current) setMyShipments((myData as unknown as Shipment[]) ?? []);
       }
     } else {
-      console.log("[useTransporterShipments] No transporterId, skipping 'my shipments' fetch.");
-      setMyShipments([]);
+      if (mountedRef.current) setMyShipments([]);
     }
-    console.log("[useTransporterShipments] fetchShipments done");
-    setLoading(false);
+
+    if (mountedRef.current) setLoading(false);
+    isFetchingRef.current = false;
   }, [supabase, transporterId]);
   // Keep fetchShipmentsRef updated so real-time callbacks always use the latest version
   const fetchShipmentsRef = useRef(fetchShipments);
@@ -143,7 +153,9 @@ export function useTransporterShipments(
   // ── Initial fetch ─────────────────────────────────────────────────────────
   useEffect(() => {
     fetchShipments();
-  }, [fetchShipments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transporterId]); 
+
 
   // BUG-11 FIX: realtime subscription scoped to pending shipments only.
   // We cannot filter by transporter_id=eq.X for pending rows (they have
