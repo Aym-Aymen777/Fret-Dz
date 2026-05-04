@@ -39,7 +39,7 @@ export interface UseTransporterShipmentsReturn {
 export function useTransporterShipments(
   transporterId?: string
 ): UseTransporterShipmentsReturn {
-  const supabase = useRef(createClient()).current;
+  const [supabase] = useState(() => createClient());
   const [pendingShipments, setPendingShipments] = useState<Shipment[]>([]);
   const [myShipments, setMyShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,22 +89,15 @@ export function useTransporterShipments(
       console.log("[useTransporterShipments] No transporterId, skipping 'my shipments' fetch.");
       setMyShipments([]);
     }
-console.log("[useTransporterShipments] fetchShipments done, pending:", pendingData?.length);
-console.log("[useTransporterShipments] fetchShipments done, pending:", pendingData?.length);   
-console.log("[fetch] END");
-setLoading(false);
+    console.log("[useTransporterShipments] fetchShipments done");
+    setLoading(false);
   }, [supabase, transporterId]);
+  // Keep fetchShipmentsRef updated so real-time callbacks always use the latest version
   const fetchShipmentsRef = useRef(fetchShipments);
-useEffect(() => {
-  fetchShipmentsRef.current = fetchShipments;
-}, [fetchShipments]);
-useEffect(() => {
-  console.log("[effect] loading changed:", loading);
-}, [loading]);
+  useEffect(() => {
+    fetchShipmentsRef.current = fetchShipments;
+  }, [fetchShipments]);
 
-useEffect(() => {
-  console.log("[effect] fetchShipments ref changed");
-}, [fetchShipments]);
   /**
    * Generic status update (in_transit, delivered, rejected).
    * For accepting a pending shipment use the server action acceptShipmentAction
