@@ -183,16 +183,26 @@ export default function Navbar({
   // Home link depends on role
   const homeHref = role === "transporter" ? "/transporter" : "/dashboard";
 
-  const handleSignOut = async () => {
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    // Full reload so the server re-reads the cleared session cookie.
-    // router.push() would do a client-side navigation and may serve a
-    // cached server component that still shows the authenticated layout.
-    window.location.href = "/login";
-  };
+const handleSignOut = async () => {
+  const { createClient } = await import("@/lib/supabase/client");
+  const supabase = createClient();
 
+  // 1. Sign out from Supabase
+  await supabase.auth.signOut();
+
+  // 2. Clear all cookies manually (client-side)
+  document.cookie.split(";").forEach((cookie) => {
+    const name = cookie.split("=")[0].trim();
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  });
+
+  // 3. Optional: clear localStorage/sessionStorage
+  localStorage.clear();
+  sessionStorage.clear();
+
+  // 4. Force full reload
+  window.location.href = "/login";
+};
   const initials = profile?.full_name
     ? profile.full_name.substring(0, 2).toUpperCase()
     : user?.email
