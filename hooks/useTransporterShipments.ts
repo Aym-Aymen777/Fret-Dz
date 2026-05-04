@@ -45,6 +45,15 @@ export function useTransporterShipments(
   const isFetchingRef = useRef(false);
 
   const fetchShipments = useCallback(async () => {
+     // ── Guard: ensure we have an authenticated session before hitting RLS ──
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    if (mountedRef.current) {
+      setLoading(false);
+      setError("Session expirée. Veuillez vous reconnecter.");
+    }
+    return;
+  }
     // BUG-1 FIX: guard checked BEFORE setLoading — never sets loading=true
     // if we're going to bail out immediately
     if (isFetchingRef.current) return;
