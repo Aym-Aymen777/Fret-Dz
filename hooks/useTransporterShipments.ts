@@ -1,15 +1,5 @@
 "use client";
-// ─────────────────────────────────────────────
-//  Fret-DZ  |  useTransporterShipments hook
-//
-//  Returns two separate lists:
-//  - pendingShipments : ALL pending shipments (visible via RLS)
-//  - myShipments      : Non-pending shipments assigned to this transporter
-//
-//  BUG-11 FIX: realtime channel now uses a scoped channel name and
-//  does not broadcast every shipment mutation to every connected client.
-// ─────────────────────────────────────────────
-import { useEffect, useState, useCallback,useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Shipment } from "@/lib/types";
 
@@ -25,7 +15,7 @@ const CLIENT_SELECT = `
 
 export interface UseTransporterShipmentsReturn {
   pendingShipments: Shipment[];
-  myShipments: Shipment[]
+  myShipments: Shipment[];
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -51,68 +41,66 @@ export function useTransporterShipments(
     return () => { mountedRef.current = false; };
   }, []);
 
+  // BUG-1 FIX: moved BELOW setLoading so the guard never traps loading=true
   const isFetchingRef = useRef(false);
 
   const fetchShipments = useCallback(async () => {
+    // BUG-1 FIX: guard checked BEFORE setLoading — never sets loading=true
+    // if we're going to bail out immediately
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
-    
+
     setLoading(true);
     setError(null);
 
-    // ── 1. All pending shipments (visible to every transporter via RLS) ──────
-    console.log("[useTransporterShipments] Fetching pending shipments...");
-    const { data: pendingData, error: pendingErr } = await supabase
-      .from("shipments")
-      .select(CLIENT_SELECT)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
-
-    if (pendingErr) {
-      if (mountedRef.current) {
-        setError(pendingErr.message);
-        setLoading(false);
-      }
-      isFetchingRef.current = false;
-      return;
-    }
-
-    if (!mountedRef.current) return;
-    setPendingShipments((pendingData as unknown as Shipment[]) ?? []);
-
-    // ── 2. This transporter's own non-pending shipments ──────────────────────
-    if (transporterId) {
-      console.log("[useTransporterShipments] Fetching my shipments for ID:", transporterId);
-      const { data: myData, error: myErr } = await supabase
+    try {
+      // ── 1. All pending shipments ─────────────────────────────────────────
+      const { data: pendingData, error: pendingErr } = await supabase
         .from("shipments")
         .select(CLIENT_SELECT)
-        .eq("transporter_id", transporterId)
-        .neq("status", "pending")
+        .eq("status", "pending")
         .order("created_at", { ascending: false });
 
-      if (myErr) {
-        if (mountedRef.current) setError(myErr.message);
-      } else {
-        if (mountedRef.current) setMyShipments((myData as unknown as Shipment[]) ?? []);
-      }
-    } else {
-      if (mountedRef.current) setMyShipments([]);
-    }
+      if (!mountedRef.current) return; // BUG-1 FIX: isFetchingRef reset in finally
 
-    if (mountedRef.current) setLoading(false);
-    isFetchingRef.current = false;
+      if (pendingErr) {
+        setError(pendingErr.message);
+        return;
+      }
+
+      setPendingShipments((pendingData as unknown as Shipment[]) ?? []);
+
+      // ── 2. This transporter's own non-pending shipments ──────────────────
+      if (transporterId) {
+        const { data: myData, error: myErr } = await supabase
+          .from("shipments")
+          .select(CLIENT_SELECT)
+          .eq("transporter_id", transporterId)
+          .neq("status", "pending")
+          .order("created_at", { ascending: false });
+
+        if (!mountedRef.current) return;
+
+        if (myErr) {
+          setError(myErr.message);
+        } else {
+          setMyShipments((myData as unknown as Shipment[]) ?? []);
+        }
+      } else {
+        setMyShipments([]);
+      }
+    } finally {
+      // BUG-1 FIX: ALWAYS reset both flags, even if we returned early above
+      isFetchingRef.current = false;
+      if (mountedRef.current) setLoading(false);
+    }
   }, [supabase, transporterId]);
-  // Keep fetchShipmentsRef updated so real-time callbacks always use the latest version
+
   const fetchShipmentsRef = useRef(fetchShipments);
   useEffect(() => {
     fetchShipmentsRef.current = fetchShipments;
   }, [fetchShipments]);
 
-  /**
-   * Generic status update (in_transit, delivered, rejected).
-   * For accepting a pending shipment use the server action acceptShipmentAction
-   * which also sets transporter_id (required to satisfy RLS).
-   */
   const updateShipmentStatus = useCallback(
     async (
       id: string,
@@ -128,11 +116,6 @@ export function useTransporterShipments(
         updates.rejection_reason = rejectionReason;
       }
 
-      // BUG-4 FIX: add .select("id") to detect silent RLS failures.
-      // Supabase returns { data: [], error: null } when a row-level policy
-      // blocks the update — no error, but 0 rows affected.  Without .select()
-      // the old code saw error=null, called toast.success(), and refreshed the
-      // list — but the database was never changed.
       const { data: updated, error: updateError } = await supabase
         .from("shipments")
         .update(updates)
@@ -150,45 +133,40 @@ export function useTransporterShipments(
     [supabase, fetchShipments]
   );
 
-  // ── Initial fetch ─────────────────────────────────────────────────────────
+  // BUG-2 FIX: depend on fetchShipments (stable via useCallback) not just transporterId
   useEffect(() => {
     fetchShipments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transporterId]); 
+  }, [fetchShipments]);
 
+  // ── Realtime: pending feed ────────────────────────────────────────────────
+  useEffect(() => {
+    const pendingChannel = supabase
+      .channel("transporter-pending-rt")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shipments", filter: "status=eq.pending" },
+        () => fetchShipmentsRef.current()
+      )
+      .subscribe();
 
-  // BUG-11 FIX: realtime subscription scoped to pending shipments only.
-  // We cannot filter by transporter_id=eq.X for pending rows (they have
-  // transporter_id = NULL), so we subscribe to status=eq.pending for the
-  // global feed and to transporter_id=eq.transporterId for assigned ones.
-  // Each channel is independent and only refetches when truly relevant.
-useEffect(() => {
-  const pendingChannel = supabase
-    .channel("transporter-pending-rt")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "shipments", filter: "status=eq.pending" },
-      () => fetchShipmentsRef.current()
-    )
-    .subscribe();
+    return () => { supabase.removeChannel(pendingChannel); };
+  }, [supabase]);
 
-  return () => { supabase.removeChannel(pendingChannel); };
-}, [supabase]);
+  // ── Realtime: assigned shipments ─────────────────────────────────────────
+  useEffect(() => {
+    if (!transporterId) return;
 
-useEffect(() => {
-  if (!transporterId) return;
+    const myChannel = supabase
+      .channel(`transporter-mine-rt-${transporterId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shipments", filter: `transporter_id=eq.${transporterId}` },
+        () => fetchShipmentsRef.current()
+      )
+      .subscribe();
 
-  const myChannel = supabase
-    .channel(`transporter-mine-rt-${transporterId}`)
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "shipments", filter: `transporter_id=eq.${transporterId}` },
-      () => fetchShipmentsRef.current()
-    )
-    .subscribe();
-
-  return () => { supabase.removeChannel(myChannel); };
-}, [supabase, transporterId]);
+    return () => { supabase.removeChannel(myChannel); };
+  }, [supabase, transporterId]);
 
   return {
     pendingShipments,
