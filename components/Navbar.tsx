@@ -193,6 +193,8 @@ const handleSignOut = async () => {
     const name = cookie.split("=")[0].trim();
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
   });
+
+  window.location.href = "/login";
   
   // 2. Sign out from Supabase
   await supabase.auth.signOut();
@@ -200,8 +202,6 @@ const handleSignOut = async () => {
   localStorage.clear();
   sessionStorage.clear();
 
-  // 4. Force full reload
-  window.location.href = "/login";
 };
   const initials = profile?.full_name
     ? profile.full_name.substring(0, 2).toUpperCase()
