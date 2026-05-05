@@ -105,8 +105,11 @@ L'application est deployee automatiquement sur **Vercel** a chaque `git push` su
 
 | Champ | Valeur |
 |---|---|
-| Email | `test@fret-dz.com` |
+| Email | `client@fret-dz.com` |
 | Mot de passe | `Test1234!` |
+| Email | `transporter@fret-dz.com` |
+| Mot de passe | `Test1234!` |
+
 
 ---
 
