@@ -30,8 +30,8 @@ export default async function HomePage() {
             <Image
               src="/logo.png"
               alt="Logo Fret-DZ"
-              width={32}
-              height={32}
+              width={72}
+              height={72}
               className="object-contain"
             />
             <span className="font-display text-xl font-bold text-[var(--fg)]">
