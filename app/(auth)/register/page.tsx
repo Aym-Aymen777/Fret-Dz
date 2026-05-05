@@ -217,9 +217,7 @@ export default function RegisterPage() {
 
           {/* Logo */}
           <div className="mb-6 flex flex-col items-center gap-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-500 shadow-glow">
-              <span className="font-display text-xl font-black text-white">F</span>
-            </div>
+            <img src="/logo.png" alt="Fret-DZ" className="h-20 w-20 rounded-full"/>
             <h1 className="font-display text-2xl font-bold text-[var(--fg)]">
               Rejoindre Fret<span className="text-gradient-primary">-DZ</span>
             </h1>

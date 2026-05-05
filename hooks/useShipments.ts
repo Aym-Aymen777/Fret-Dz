@@ -39,41 +39,68 @@ export function useShipments(): UseShipmentsReturn {
     setLoading(true);
     setError(null);
 
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) {
-      setError("Not authenticated");
-      setLoading(false);
-      return;
+    let timeoutId: NodeJS.Timeout;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error("TIMEOUT")), 10000);
+    });
+
+    try {
+      await Promise.race([
+        (async () => {
+          const { data: userData } = await supabase.auth.getUser();
+          if (!userData.user) {
+            if (mountedRef.current) {
+              setError("Not authenticated");
+              setLoading(false);
+            }
+            return;
+          }
+
+          if (mountedRef.current) setUserId(userData.user.id);
+
+          const { data, error: fetchError } = await supabase
+            .from("shipments")
+            .select(
+              `
+              *,
+              transporter:transporters (
+                id,
+                company_name,
+                vehicle_type,
+                rating,
+                logo_url,
+                phone,
+                wilaya
+              )
+            `,
+            )
+            .eq("client_id", userData.user.id)
+            .order("created_at", { ascending: false });
+
+          if (!mountedRef.current) return;
+
+          if (fetchError) {
+            setError(fetchError.message);
+          } else {
+            setShipments((data as Shipment[]) ?? []);
+          }
+        })(),
+        timeoutPromise,
+      ]);
+    } catch (err: any) {
+      if (mountedRef.current) {
+        if (err.message === "TIMEOUT") {
+          setError("you have poor connection try later");
+        } else {
+          setError(err.message || "An unexpected error occurred");
+        }
+      }
+    } finally {
+      clearTimeout(timeoutId!);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
-
-    setUserId(userData.user.id);
-
-    const { data, error: fetchError } = await supabase
-      .from("shipments")
-      .select(
-        `
-        *,
-        transporter:transporters (
-          id,
-          company_name,
-          vehicle_type,
-          rating,
-          logo_url,
-          phone,
-          wilaya
-        )
-      `,
-      )
-      .eq("client_id", userData.user.id)
-      .order("created_at", { ascending: false });
-
-    if (fetchError) {
-      setError(fetchError.message);
-    } else {
-      setShipments((data as Shipment[]) ?? []);
-    }
-
-    setLoading(false);
   }, [supabase]);
 
   const backgroundUpload = useCallback(

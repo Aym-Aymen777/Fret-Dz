@@ -96,9 +96,9 @@ const config: Config = {
 
       /* ── Typography ── */
       fontFamily: {
-        sans:  ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono:  ["JetBrains Mono", "ui-monospace", "monospace"],
-        display: ["Outfit", "ui-sans-serif", "sans-serif"],
+        sans: ["Roboto Condensed", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+        display: ["Roboto Condensed", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       fontSize: {
         "2xs": ["0.625rem", { lineHeight: "0.875rem" }],

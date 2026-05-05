@@ -49,54 +49,75 @@ export function useTransporterShipments(
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
 
+    setLoading(true); // ← only reached when the guard passed
+    setError(null);
+
+    let timeoutId: NodeJS.Timeout;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error("TIMEOUT")), 10000);
+    });
+
     try {
-      setLoading(true);   // ← only reached when the guard passed
-      setError(null);
+      await Promise.race([
+        (async () => {
+          // ── Session check before any RLS-protected query ───────────────────
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (!session) {
+            if (mountedRef.current) {
+              setError("Session expirée. Veuillez vous reconnecter.");
+            }
+            return;
+          }
+          // ── 1. All pending shipments ─────────────────────────────────────────
+          const { data: pendingData, error: pendingErr } = await supabase
+            .from("shipments")
+            .select(CLIENT_SELECT)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false });
 
-      // ── Session check before any RLS-protected query ───────────────────
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        if (mountedRef.current) {
-          setError("Session expirée. Veuillez vous reconnecter.");
-        }
-        return;
-      }
-      // ── 1. All pending shipments ─────────────────────────────────────────
-      const { data: pendingData, error: pendingErr } = await supabase
-        .from("shipments")
-        .select(CLIENT_SELECT)
-        .eq("status", "pending")
-        .order("created_at", { ascending: false });
+          if (!mountedRef.current) return;
 
-      if (!mountedRef.current) return;
+          if (pendingErr) {
+            setError(pendingErr.message);
+            return;
+          }
 
-      if (pendingErr) {
-        setError(pendingErr.message);
-        return;
-      }
+          setPendingShipments((pendingData as unknown as Shipment[]) ?? []);
 
-      setPendingShipments((pendingData as unknown as Shipment[]) ?? []);
+          // ── 2. This transporter's own non-pending shipments ──────────────────
+          if (transporterId) {
+            const { data: myData, error: myErr } = await supabase
+              .from("shipments")
+              .select(CLIENT_SELECT)
+              .eq("transporter_id", transporterId)
+              .neq("status", "pending")
+              .order("created_at", { ascending: false });
 
-      // ── 2. This transporter's own non-pending shipments ──────────────────
-      if (transporterId) {
-        const { data: myData, error: myErr } = await supabase
-          .from("shipments")
-          .select(CLIENT_SELECT)
-          .eq("transporter_id", transporterId)
-          .neq("status", "pending")
-          .order("created_at", { ascending: false });
+            if (!mountedRef.current) return;
 
-        if (!mountedRef.current) return;
-
-        if (myErr) {
-          setError(myErr.message);
+            if (myErr) {
+              setError(myErr.message);
+            } else {
+              setMyShipments((myData as unknown as Shipment[]) ?? []);
+            }
+          } else {
+            setMyShipments([]);
+          }
+        })(),
+        timeoutPromise,
+      ]);
+    } catch (err: any) {
+      if (mountedRef.current) {
+        if (err.message === "TIMEOUT") {
+          setError("you have poor connection try later");
         } else {
-          setMyShipments((myData as unknown as Shipment[]) ?? []);
+          setError(err.message || "An unexpected error occurred");
         }
-      } else {
-        setMyShipments([]);
       }
     } finally {
+      clearTimeout(timeoutId!);
       // Always reset both flags — guarantees no stuck loading state
       isFetchingRef.current = false;
       if (mountedRef.current) setLoading(false);
