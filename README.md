@@ -98,8 +98,8 @@ npm run dev
 
 L'application est deployee automatiquement sur **Vercel** a chaque `git push` sur la branche `main`.
 
-- **URL de production :** *(a completer apres deploiement)*
-- **Depot GitHub :** *(lien a ajouter)*
+- **URL de production :** *(https://fret-dz-topaz.vercel.app/)*
+- **Depot GitHub :** *(https://github.com/Aym-Aymen777/Fret-Dz)*
 
 ## Identifiants de test
 
