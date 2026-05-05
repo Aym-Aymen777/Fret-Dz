@@ -4,6 +4,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import Image from "next/image";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -26,9 +27,13 @@ export default async function HomePage() {
       <header className="sticky top-0 z-navbar border-b border-[var(--border)] glass">
         <nav className="page-container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500">
-              <span className="text-sm font-black text-white">F</span>
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Logo Fret-DZ"
+              width={32}
+              height={32}
+              className="object-contain"
+            />
             <span className="font-display text-xl font-bold text-[var(--fg)]">
               Fret<span className="text-gradient-primary">-DZ</span>
             </span>
